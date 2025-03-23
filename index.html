@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sleep vs Stress Trend Analysis</title>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- External CSS -->
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js Zoom Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header class="hero">
+      <h1>Sleep vs Stress Trends</h1>
+      <p>Discover how sleep hours correlate with stress levels.<br>
+         Upload a CSV with <strong>Sleep_Hours_per_Night</strong>, <strong>Stress_Level (1-10)</strong>, <strong>Grade</strong>, <strong>Gender</strong>, and <strong>Department</strong>.
+      </p>
+    </header>
+
+    <section class="controls">
+      <div class="control-group">
+        <label for="csvFile" class="file-label">Select CSV File:</label>
+        <input type="file" id="csvFile" accept=".csv" aria-label="Upload CSV file" />
+      </div>
+      <div class="control-group">
+        <label for="groupSelect">Group By:</label>
+        <select id="groupSelect">
+          <option value="Grade">Grade</option>
+          <option value="Gender">Gender</option>
+          <option value="Department">Department</option>
+        </select>
+      </div>
+      <button id="resetBtn">Reset Chart</button>
+    </section>
+
+    <!-- Single large chart -->
+    <section class="chart-wrapper">
+      <h2>Average Stress per Sleep Hour Trend</h2>
+      <canvas id="scatterChart"></canvas>
+      <p class="chart-note">
+        Trend lines are computed using 0.5-hour bins.
+      </p>
+    </section>
+
+    <!-- Message area -->
+    <div id="messageArea" role="alert" aria-live="polite"></div>
+  </div>
+
+  <!-- Modal for enlarged chart -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="modalClose" class="modal-close">&times;</span>
+      <canvas id="modalChart"></canvas>
+      <button id="modalResetZoomBtn">Reset Zoom</button>
+    </div>
+  </div>
+
+  <!-- Main JS file -->
+  <script src="app.js"></script>
+</body>
+</html>
