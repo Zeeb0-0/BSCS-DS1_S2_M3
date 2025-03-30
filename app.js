@@ -1,13 +1,7 @@
 /*
-  app.js - Single scatter chart showing trend lines for average stress per sleep hour bin,
-  computed per group (selected by user: Grade, Gender, or Department).
-
-  For each group, we:
-    - Bin data by Sleep_Hours_per_Night (using a bin size, here default is 0.5 hours).
-    - Compute the average Sleep and average Stress in that bin.
-    - Plot these averages as points, and connect them with a line.
-
-  This yields a trend line for each group, showing how average stress changes as sleep hours vary.
+  app.js - v1.3 of BSCS-DS1_S2_M3html (Enhanced with Artistic, Interactive, and Export Modal Features)
+  Displays a scatter chart with trend lines for average stress per sleep hour bin,
+  grouped by Grade, Gender, or Department.
   
   CSV columns expected:
     Sleep_Hours_per_Night
@@ -17,20 +11,29 @@
     Department
 */
 
-// Global chart reference and raw data
+// Global chart reference, raw data, and animation toggle flag
 let scatterChart = null;
 let rawData = [];
+let animationsEnabled = true; // default ON
 
 // DOM elements
 const csvFileInput = document.getElementById('csvFile');
 const resetBtn = document.getElementById('resetBtn');
 const groupSelect = document.getElementById('groupSelect');
 const messageArea = document.getElementById('messageArea');
+const toggleAnimationsBtn = document.getElementById('toggleAnimationsBtn');
+const exportBtn = document.getElementById('exportBtn');
 
-// Set bin size (in hours) for grouping sleep data
+// Export modal elements
+const exportModal = document.getElementById('exportModal');
+const confirmExportBtn = document.getElementById('confirmExportBtn');
+const cancelExportBtn = document.getElementById('cancelExportBtn');
+const exportFilenameInput = document.getElementById('exportFilename');
+
+// Set bin size (in hours)
 const BIN_SIZE = 0.5;
 
-// On DOM load, attach event listeners
+// Attach event listeners on DOM load
 document.addEventListener('DOMContentLoaded', () => {
   csvFileInput.addEventListener('change', handleFile);
   resetBtn.addEventListener('click', resetChart);
@@ -39,43 +42,68 @@ document.addEventListener('DOMContentLoaded', () => {
       renderChart(groupSelect.value);
     }
   });
+  toggleAnimationsBtn.addEventListener('click', toggleAnimations);
+  exportBtn.addEventListener('click', showExportModal);
+  confirmExportBtn.addEventListener('click', handleExport);
+  cancelExportBtn.addEventListener('click', hideExportModal);
+  updateToggleButton(); // Initialize toggle button style and text
 });
 
 /**
- * Returns a color based on the grouping attribute and its value.
- * @param {string} groupBy - "Grade", "Gender", or "Department"
- * @param {string} value - the group value.
+ * Toggles animations on/off and updates the chart options if rendered.
+ */
+function toggleAnimations() {
+  animationsEnabled = !animationsEnabled;
+  updateToggleButton();
+  showMessage(`Animations ${animationsEnabled ? "enabled" : "disabled"}.`, "info");
+  if (scatterChart) {
+    scatterChart.options.animation = animationsEnabled ? { duration: 1000, easing: 'easeOutQuart' } : false;
+    scatterChart.update();
+  }
+}
+
+/**
+ * Updates the toggle animations button's appearance.
+ */
+function updateToggleButton() {
+  if (animationsEnabled) {
+    toggleAnimationsBtn.classList.remove('off');
+    toggleAnimationsBtn.classList.add('on');
+    toggleAnimationsBtn.textContent = "Animations: ON";
+  } else {
+    toggleAnimationsBtn.classList.remove('on');
+    toggleAnimationsBtn.classList.add('off');
+    toggleAnimationsBtn.textContent = "Animations: OFF";
+  }
+}
+
+/**
+ * Returns a color based on the group attribute and value.
  */
 function getColor(groupBy, value) {
   if (groupBy === "Grade") {
-    // For Grade: F = red, D = orange, C = yellow, B = light green, A = green
     const gradeColors = { "F": "#e74c3c", "D": "#e67e22", "C": "#f1c40f", "B": "#27ae60", "A": "#2ecc71" };
-    return gradeColors[value] || "#9b59b6"; // fallback color
+    return gradeColors[value] || "#9b59b6";
   } else if (groupBy === "Gender") {
-    // For Gender: Female = red, Male = blue
     const genderColors = { "Female": "#e74c3c", "Male": "#3498db" };
     return genderColors[value] || "#9b59b6";
   } else if (groupBy === "Department") {
-    // Example department colors; adjust as needed.
     const deptColors = { "Engineering": "#2ecc71", "Business": "#3498db", "CS": "#e74c3c", "Mathematics": "#f1c40f" };
     return deptColors[value] || "#e67e22";
   }
-  return "#95a5a6"; // default
+  return "#95a5a6";
 }
 
 /**
- * Display a feedback message.
- * @param {string} msg - The message.
- * @param {string} type - 'error' or 'info' (default: error).
+ * Displays a feedback message with color based on type.
  */
 function showMessage(msg, type = 'error') {
   messageArea.textContent = msg;
-  messageArea.style.color = type === 'error' ? '#e74c3c' : '#2ecc71';
+  messageArea.style.color = type === 'error' ? '#e74c3c' : '#27ae60';
 }
 
 /**
- * Handle CSV file input using PapaParse.
- * @param {Event} event - File input change event.
+ * Handles CSV file input using PapaParse.
  */
 function handleFile(event) {
   const file = event.target.files[0];
@@ -88,7 +116,6 @@ function handleFile(event) {
     return;
   }
   showMessage("", 'info');
-
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
@@ -106,8 +133,7 @@ function handleFile(event) {
 }
 
 /**
- * Validate CSV columns and store raw data.
- * @param {Array} data - Parsed CSV data.
+ * Validates CSV columns and stores raw data.
  */
 function processCSV(data) {
   const requiredCols = ["Sleep_Hours_per_Night", "Stress_Level (1-10)", "Grade", "Gender", "Department"];
@@ -117,8 +143,6 @@ function processCSV(data) {
       return;
     }
   }
-
-  // Filter rows with valid numeric values
   rawData = data.filter((row, idx) => {
     const sleep = parseFloat(row["Sleep_Hours_per_Night"]);
     const stress = parseFloat(row["Stress_Level (1-10)"]);
@@ -128,28 +152,22 @@ function processCSV(data) {
     }
     return true;
   });
-
   if (rawData.length === 0) {
     showMessage("No valid data found in CSV.");
     return;
   }
-
   showMessage("CSV parsed successfully.", "info");
   renderChart(groupSelect.value);
 }
 
 /**
- * Bin data by Sleep_Hours_per_Night and compute averages for a given group.
- * @param {Array} groupData - Array of rows for one group.
- * @param {number} binSize - Size of each bin (default BIN_SIZE).
- * @returns {Array} - Array of points { x: avgSleep, y: avgStress } for each bin.
+ * Bins data by Sleep_Hours_per_Night and computes average values.
  */
 function computeBinnedAverages(groupData, binSize = BIN_SIZE) {
-  const bins = {}; // { binIndex: { sumSleep, sumStress, count } }
+  const bins = {};
   groupData.forEach(row => {
     const sleep = parseFloat(row["Sleep_Hours_per_Night"]);
     const stress = parseFloat(row["Stress_Level (1-10)"]);
-    // Determine bin index: using floor(sleep / binSize)
     const binIndex = Math.floor(sleep / binSize);
     if (!bins[binIndex]) {
       bins[binIndex] = { sumSleep: 0, sumStress: 0, count: 0 };
@@ -158,8 +176,6 @@ function computeBinnedAverages(groupData, binSize = BIN_SIZE) {
     bins[binIndex].sumStress += stress;
     bins[binIndex].count += 1;
   });
-
-  // Convert bins into an array of points
   const points = [];
   Object.keys(bins).forEach(binIdx => {
     const info = bins[binIdx];
@@ -168,23 +184,17 @@ function computeBinnedAverages(groupData, binSize = BIN_SIZE) {
       y: info.sumStress / info.count
     });
   });
-  // Sort points by x value
   return points.sort((a, b) => a.x - b.x);
 }
 
 /**
- * Render scatter chart based on selected grouping attribute.
- * For each group value, bin the data by sleep hours and compute average values.
- * Each group is rendered as a separate dataset (with line and points) to show trends.
- * @param {string} groupBy - "Grade" | "Gender" | "Department"
+ * Renders the scatter chart based on the selected group.
  */
 function renderChart(groupBy) {
   const ctx = document.getElementById('scatterChart').getContext('2d');
   if (scatterChart) {
     scatterChart.destroy();
   }
-
-  // Group rawData by the selected attribute.
   const groups = {};
   rawData.forEach(row => {
     const key = row[groupBy];
@@ -193,8 +203,6 @@ function renderChart(groupBy) {
     }
     groups[key].push(row);
   });
-
-  // Create a dataset for each group using binned averages.
   const datasets = Object.keys(groups).map((groupVal) => {
     const binnedData = computeBinnedAverages(groups[groupVal]);
     return {
@@ -207,15 +215,15 @@ function renderChart(groupBy) {
       pointHoverRadius: 5,
       showLine: true,
       fill: false,
-      tension: 0  // Straight lines
+      tension: 0
     };
   });
-
+  const chartAnimations = animationsEnabled ? { duration: 1000, easing: 'easeOutQuart' } : false;
   const config = {
     type: 'scatter',
     data: { datasets },
     options: {
-      animation: false,
+      animation: chartAnimations,
       responsive: true,
       plugins: {
         legend: { position: 'top' },
@@ -249,12 +257,22 @@ function renderChart(groupBy) {
       }
     }
   };
-
   scatterChart = new Chart(ctx, config);
+  const canvas = document.getElementById('scatterChart');
+  if (animationsEnabled) {
+    canvas.style.opacity = 0;
+    setTimeout(() => {
+      canvas.style.transition = 'opacity 1s ease-out';
+      canvas.style.opacity = 1;
+    }, 50);
+  } else {
+    canvas.style.transition = '';
+    canvas.style.opacity = 1;
+  }
 }
 
 /**
- * Reset chart and clear file input.
+ * Resets the chart and clears the CSV input.
  */
 function resetChart() {
   if (scatterChart) {
@@ -265,3 +283,92 @@ function resetChart() {
   csvFileInput.value = '';
   showMessage("Chart has been reset.", "info");
 }
+
+/**
+ * Shows the export modal.
+ */
+function showExportModal() {
+  exportModal.style.display = "block";
+}
+
+/**
+ * Hides the export modal.
+ */
+function hideExportModal() {
+  exportModal.style.display = "none";
+}
+
+/**
+ * Handles the export modal's "Export" button.
+ */
+function handleExport() {
+  const selectedType = document.querySelector('input[name="exportType"]:checked').value;
+  const filename = exportFilenameInput.value.trim() || "chart_output";
+  hideExportModal();
+  if (selectedType === "csv") {
+    exportCSV(filename);
+  } else if (selectedType === "png" || selectedType === "jpg") {
+    exportChartAsImage(filename, selectedType);
+  } else {
+    showMessage("Invalid export file type selected.", "error");
+  }
+}
+
+/**
+ * Exports the computed chart data as a human-readable CSV file.
+ */
+function exportCSV(filename) {
+  if (!scatterChart) {
+    showMessage("No chart data to export.", "error");
+    return;
+  }
+  let csvContent = "=== Chart Export ===\n\n";
+  scatterChart.data.datasets.forEach(dataset => {
+    // Create header for each dataset
+    const groupLabel = dataset.label.split(': ')[1];
+    csvContent += `Dataset: ${groupLabel}\n`;
+    csvContent += "Avg Sleep,Avg Stress\n";
+    dataset.data.forEach(point => {
+      // Pad columns for better alignment (using fixed widths)
+      const sleepStr = point.x.toFixed(2).padStart(8, ' ');
+      const stressStr = point.y.toFixed(2).padStart(8, ' ');
+      csvContent += `${sleepStr},${stressStr}\n`;
+    });
+    csvContent += "\n";
+  });
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showMessage("CSV exported successfully.", "info");
+}
+
+/**
+ * Exports the chart canvas as an image file.
+ */
+function exportChartAsImage(filename, type) {
+  if (!scatterChart) {
+    showMessage("No chart available for export.", "error");
+    return;
+  }
+  const canvas = document.getElementById('scatterChart');
+  const dataURL = canvas.toDataURL(`image/${type}`);
+  const link = document.createElement("a");
+  link.href = dataURL;
+  link.download = `${filename}.${type}`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showMessage(`Chart exported as image (${type.toUpperCase()}).`, "info");
+}
+
+// Close export modal when clicking outside modal content
+window.addEventListener("click", (event) => {
+  if (event.target === exportModal) {
+    hideExportModal();
+  }
+});

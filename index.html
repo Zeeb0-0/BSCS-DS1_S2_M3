@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sleep vs Stress Trend Analysis</title>
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
   <!-- External CSS -->
   <link rel="stylesheet" href="styles.css" />
   <!-- Chart.js library -->
@@ -19,8 +19,9 @@
   <div class="container">
     <header class="hero">
       <h1>Sleep vs Stress Trends</h1>
-      <p>Discover how sleep hours correlate with stress levels.<br>
-         Upload a CSV with <strong>Sleep_Hours_per_Night</strong>, <strong>Stress_Level (1-10)</strong>, <strong>Grade</strong>, <strong>Gender</strong>, and <strong>Department</strong>.
+      <p>
+        Discover how sleep hours correlate with stress levels.<br>
+        Upload a CSV with <strong>Sleep_Hours_per_Night</strong>, <strong>Stress_Level (1-10)</strong>, <strong>Grade</strong>, <strong>Gender</strong>, and <strong>Department</strong>.
       </p>
     </header>
 
@@ -38,14 +39,16 @@
         </select>
       </div>
       <button id="resetBtn">Reset Chart</button>
+      <button id="toggleAnimationsBtn" class="toggle-btn on">Animations: ON</button>
+      <button id="exportBtn">Export Output</button>
     </section>
 
-    <!-- Single large chart -->
+    <!-- Chart section -->
     <section class="chart-wrapper">
       <h2>Average Stress per Sleep Hour Trend</h2>
       <canvas id="scatterChart"></canvas>
       <p class="chart-note">
-        Trend lines are computed using 0.5-hour bins.
+        Trend lines are computed using 0.5‑hour bins.
       </p>
     </section>
 
@@ -53,12 +56,41 @@
     <div id="messageArea" role="alert" aria-live="polite"></div>
   </div>
 
-  <!-- Modal for enlarged chart -->
+  <!-- Modal for enlarged chart (existing) -->
   <div id="modal" class="modal">
     <div class="modal-content">
       <span id="modalClose" class="modal-close">&times;</span>
       <canvas id="modalChart"></canvas>
       <button id="modalResetZoomBtn">Reset Zoom</button>
+    </div>
+  </div>
+
+  <!-- New Export Modal -->
+  <div id="exportModal" class="modal">
+    <div class="modal-content export-content">
+      <h2>Export Options</h2>
+      <form id="exportForm">
+        <div class="export-option">
+          <input type="radio" id="exportCsv" name="exportType" value="csv" checked>
+          <label for="exportCsv">Export as CSV</label>
+        </div>
+        <div class="export-option">
+          <input type="radio" id="exportPng" name="exportType" value="png">
+          <label for="exportPng">Export as PNG</label>
+        </div>
+        <div class="export-option">
+          <input type="radio" id="exportJpg" name="exportType" value="jpg">
+          <label for="exportJpg">Export as JPG</label>
+        </div>
+        <div class="export-filename">
+          <label for="exportFilename">Filename:</label>
+          <input type="text" id="exportFilename" value="chart_output" />
+        </div>
+        <div class="export-buttons">
+          <button type="button" id="confirmExportBtn">Export</button>
+          <button type="button" id="cancelExportBtn">Cancel</button>
+        </div>
+      </form>
     </div>
   </div>
 
